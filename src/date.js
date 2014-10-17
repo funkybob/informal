@@ -33,8 +33,8 @@
             if( val.isBefore( moment() )) {
                 return 'Date must be in the future';
             }
-        },
+        }
 
-    };
+    });
 
 });
