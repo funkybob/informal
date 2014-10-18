@@ -31,31 +31,27 @@ var informal = (function() {
                 validators = $field.data('validators') || '',
                 filters = $field.data('filters') || '';
 
-            // turn the validators comma separateld string into an array:
-            validators = $.map(validators.split(','), $.trim);
-            filters = $.map(filters.split(','), $.trim);
+            // turn the validators and filters comma separated string into an array:
+            validators = validators.split(',').map(function (val) { return val.trim(); });
+            filters = filters.split(',').map(function (val) { return val.trim(); });
 
             // set required based on html5 data attribute
             if($field.attr('required')) {
-                validators.push('required');
+                validators.unshift('required');
             }
 
-            $.each(filters, function (index, filter_name) {
+            // pass the value through the filters
+            filters.forEach(function(filterName) {
                 value = informal.filters[filter_name](value);
             });
 
             // save current input's values in the validation object
             values[name] = value;
 
-            var error_list = $.map(validators, function (index, validatorName) {
-                // run each validator
-                try {
-                    return informal.validators[validatorName](value, $field);
-                }
-                catch(e) {
-                    console.warn( validatorName+' is not a defined validator');
-                }
-            });
+            // run each validator
+            var error_list = validators.map(function (validatorName) {
+                return informal.validators[validatorName](value, $field);
+            }).filter(function (result) { return !!result; });
 
             // save the errors in the validation object
             if(error_list.length) {
@@ -63,15 +59,25 @@ var informal = (function() {
             }
         });
         // TODO : form-level validation
-        return {valid: $.isEmptyObject(errors), values: values, errors: errors};
+        return {
+            valid: $.isEmptyObject(errors),
+            values: values,
+            errors: errors
+        };
     };
 
     informal.filters = {
 
+        /**
+         * Filter to convert value to an integer
+         */
         as_integer: function (val) {
             return parseInt(val, 10);
         },
 
+        /**
+         * Filter to convert value to a float
+         */
         as_float: function (val) {
             return parseFloat(val);
         }
@@ -79,10 +85,16 @@ var informal = (function() {
     };
 
     informal.validators = {
+        /**
+         * Indicates the field must have a value.
+         */
         required: function (val) {
             if (!val) { return 'This value is required.'; }
         },
 
+        /**
+         * Loose validation the value looks like an email
+         */
         simple_email: function (val) {
             if(!/^.+@.+\..+$/.test(val)) {
                 return 'Must be a valid email address.';
@@ -91,20 +103,28 @@ var informal = (function() {
 
     };
 
+    /**
+     * Helpful wrapper for working with forms.
+     * @constructor
+     * @param {selector} el - The parent element of fields to be validated.
+     */
     informal.Form = function (el) {
         this.$el = $(el);
-        if(this.$el[0].nodeName !== 'FORM') {
-            this.$form = this.$el.find('form').first();
-        } else {
-            this.$form = this.$el;
-        }
+        this.$form = (this.$el[0].nodeName == 'FORM') ? this.$el : this.$el.find('form').first();
     };
 
     informal.Form.prototype = {
+        /**
+         * Clear all errors and values from a field's forms.
+         */
         clear: function () {
             this.$form[0].reset();
             this.clear_errors();
         },
+        /**
+         * Set field values from an object.
+         * @param {object} obj - The object to copy properties from
+         */
         load_record: function (obj) {
             var $fields = this.$el.find('[name]');
             $fields.each(function () {
@@ -119,10 +139,17 @@ var informal = (function() {
                 $(this).val(val === undefined ? '' : val);
             });
         },
+        /**
+         * Clear error elements from the form.
+         */
         clear_errors: function () {
             this.$el.find('.has-error .help-block').remove();
             this.$el.find('.has-error').removeClass('has-error');
         },
+        /**
+         * Add error elements to fields
+         * @param {object} errors - An object of {fieldname : [list, of, errors]}
+         */
         set_errors: function (errors) {
             this.clear_errors();
             $.each(errors, function (key, value) {
@@ -133,6 +160,10 @@ var informal = (function() {
                 });
             }, this);
         },
+        /**
+         * Clear errors and apply form validation
+         * @returns {object}
+         */
         validate: function () {
             this.clear_errors();
             return informal.validate_form(this.$el);
