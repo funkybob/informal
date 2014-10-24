@@ -19,53 +19,9 @@
 var informal = (function() {
     var informal;
 
-    informal.validate_form = function (form) {
-        var $form = $(form),
-            values = {},
-            errors = {};
-
-        $form.find('[data-validators], [required]').each(function(index) {
-            var $field = $(this),
-                name = $field.attr('name'),
-                value = $field.val(),
-                validators = $field.data('validators') || '',
-                filters = $field.data('filters') || '';
-
-            // turn the validators and filters comma separated string into an array:
-            validators = validators.split(',').map(function (val) { return val.trim(); });
-            filters = filters.split(',').map(function (val) { return val.trim(); });
-
-            // set required based on html5 data attribute
-            if($field.attr('required')) {
-                validators.unshift('required');
-            }
-
-            // pass the value through the filters
-            filters.forEach(function(filterName) {
-                value = informal.filters[filter_name](value);
-            });
-
-            // save current input's values in the validation object
-            values[name] = value;
-
-            // run each validator
-            var error_list = validators.map(function (validatorName) {
-                return informal.validators[validatorName](value, $field);
-            }).filter(function (result) { return !!result; });
-
-            // save the errors in the validation object
-            if(error_list.length) {
-                errors[name] = error_list;
-            }
-        });
-        // TODO : form-level validation
-        return {
-            valid: $.isEmptyObject(errors),
-            values: values,
-            errors: errors
-        };
-    };
-
+    /**
+     * Filters mutate values.
+     */
     informal.filters = {
 
         /**
@@ -84,6 +40,9 @@ var informal = (function() {
 
     };
 
+    /**
+     * Validator functions test values, and return the message to display.
+     */
     informal.validators = {
         /**
          * Indicates the field must have a value.
@@ -99,7 +58,7 @@ var informal = (function() {
             if(!/^.+@.+\..+$/.test(val)) {
                 return 'Must be a valid email address.';
             }
-        },
+        }
 
     };
 
@@ -166,7 +125,52 @@ var informal = (function() {
          */
         validate: function () {
             this.clear_errors();
-            return informal.validate_form(this.$el);
+            var values = {},
+                errors = {};
+
+            this.$el.find('[data-validators], [required]').each(function(index) {
+                var $field = $(this),
+                    name = $field.attr('name'),
+                    value = $field.val(),
+                    validators = $field.data('validators') || '',
+                    filters = $field.data('filters') || '';
+
+                // turn the validators and filters comma separated string into an array:
+                validators = validators.split(',').map(function (val) { return val.trim(); });
+                filters = filters.split(',').map(function (val) { return val.trim(); });
+
+                // set required based on html5 data attribute
+                if($field.attr('required')) {
+                    validators.unshift('required');
+                }
+
+                // pass the value through the filters
+                filters.forEach(function(filterName) {
+                    value = informal.filters[filter_name](value);
+                });
+
+                // save current input's values in the validation object
+                values[name] = value;
+
+                // run each validator
+                var error_list = validators.map(function (validatorName) {
+                    var result = informal.validators[validatorName](value, $field);
+                    if(result) {
+                        return $field.data('message-' + validatorName) || result;
+                    }
+                }).filter(function (result) { return !!result; });
+
+                // save the errors in the validation object
+                if(error_list.length) {
+                    errors[name] = error_list;
+                }
+            });
+            // TODO : form-level validation
+            return {
+                valid: $.isEmptyObject(errors),
+                values: values,
+                errors: errors
+            };
         }
     };
 
