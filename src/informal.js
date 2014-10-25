@@ -19,6 +19,33 @@
 var informal = (function() {
     var informal;
 
+    /*
+     * Deal with the lack of uniformity of input fields.
+     * - checkbox only has a value if it's checked
+     * - textarea?
+     * - select/option and multiple?
+     */
+    function getValue(field) {
+        var type = field.getAttribute('type') || field.nodeName;
+        helper = getValue.helper[type];
+        return (helper === undefined) ? field.value : helper(field);
+    }
+    getValue.helpers = {
+        input: function (field) { return field.value; },
+        checkbox: function (field) {
+            return field.hasAttribute('checked') ? field.value : undefined;
+        },
+    };
+    function setValue(field, value) {
+        var type = field.getAttribute('type') || field.nodeName;
+        helper = setValue.helper[type];
+        return (helper === undefined) ? field.value = value : helper(field, value);
+    }
+    setValue.helpers = {
+        input: function (field, value) { return field.value = value; },
+        checkbox: function (field, value) { return field.checked = value == field.value; }
+    };
+
     /**
      * Filters mutate values.
      */
@@ -67,9 +94,13 @@ var informal = (function() {
      * @constructor
      * @param {selector} el - The parent element of fields to be validated.
      */
-    informal.Form = function (el) {
-        this.$el = $(el);
-        this.$form = (this.$el[0].nodeName == 'FORM') ? this.$el : this.$el.find('form').first();
+    informal.Form = function (selector) {
+        if(typeof selector === 'string') {
+            this.el = document.querySelector(selector);
+        } else {
+            this.el = selector;
+        }
+        this.form = (this.el.nodeName == 'FORM') ? this.el : this.el.querySelector('form');
     };
 
     informal.Form.prototype = {
@@ -77,7 +108,7 @@ var informal = (function() {
          * Clear all errors and values from a field's forms.
          */
         clear: function () {
-            this.$form[0].reset();
+            this.form.reset();
             this.clear_errors();
         },
         /**
@@ -85,25 +116,34 @@ var informal = (function() {
          * @param {object} obj - The object to copy properties from
          */
         load_record: function (obj) {
-            var $fields = this.$el.find('[name]');
-            $fields.each(function () {
-                var val = obj[this.name],
-                    fmt = $(this).data('datefmt');
+            var field, fields = this.el.querySelectorAll('[name]');
+            for( var i=0; field = fields[i++] ; ) {
+                var val = obj[field.name],
+                    fmt = field.getAttribute('data-datefmt');
                 if(typeof val == 'function') {
-                    val = obj[this.name]();
+                    val = obj[field.name]();
                 }
                 if(fmt !== undefined) {
                     val = moment(val).format(fmt);
                 }
-                $(this).val(val === undefined ? '' : val);
-            });
+                // special case for special cases
+                field.value = (val === undefined) ? '' : val;
+            }
         },
+
+        // selector 
+        error_container: '.form-group',
+        error_class: 'has-error',
+        error_block_selector: '.has-error .help-block',
         /**
          * Clear error elements from the form.
          */
         clear_errors: function () {
-            this.$el.find('.has-error .help-block').remove();
-            this.$el.find('.has-error').removeClass('has-error');
+            var i, el,
+                errors = this.el.querySelectorAll(this.error_block_selector);
+            for(i=0; el = errors[i++]; ) { el.parent.removeChild(el); }
+            errors = this.el.querySelectorAll('.' + this.error_class);
+            for(i=0; el = errors[i++]; ) { el.classList.remove(this.error_class); }
         },
         /**
          * Add error elements to fields
@@ -111,10 +151,10 @@ var informal = (function() {
          */
         set_errors: function (errors) {
             this.clear_errors();
-            $.each(errors, function (key, value) {
-                var $input = this.$el.find('[name=' + key +']');
+            Object.getOwnPropertyNames(errors).forEach(function (key) {
+                var $input = $(this.el.querySelector('[name=' + key + ']'));
                 $input.closest('.form-group').addClass('has-error');
-                $.each(value, function (k, val) {
+                errors[key].forEach(function (val) {
                     $input.after('<div class="help-block">' + val + '</div>');
                 });
             }, this);
@@ -124,29 +164,32 @@ var informal = (function() {
          * @returns {object}
          */
         validate: function () {
-            this.clear_errors();
-            var values = {},
-                errors = {};
+            var i, field, name, value, validators, filters,
+                values = {},
+                errors = {},
+                fields = this.el.querySelectorAll('[data-validators], [required]');
 
-            this.$el.find('[data-validators], [required]').each(function(index) {
-                var $field = $(this),
-                    name = $field.attr('name'),
-                    value = $field.val(),
-                    validators = $field.data('validators') || '',
-                    filters = $field.data('filters') || '';
+            this.clear_errors();
+
+            for(i=0; field=fields[i++]; ) {
+                name = field.name;
+                // special case for special cases
+                value = field.value;
+                validators = field.getAttribute('data-validators') || '';
+                filters = field.getAttribute('data-filters') || '';
 
                 // turn the validators and filters comma separated string into an array:
                 validators = validators.split(',').map(function (val) { return val.trim(); });
                 filters = filters.split(',').map(function (val) { return val.trim(); });
 
                 // set required based on html5 data attribute
-                if($field.attr('required')) {
+                if(field.hasAttribute('required')) {
                     validators.unshift('required');
                 }
 
                 // pass the value through the filters
                 filters.forEach(function(filterName) {
-                    value = informal.filters[filter_name](value);
+                    value = informal.filters[filterName](value);
                 });
 
                 // save current input's values in the validation object
@@ -154,9 +197,9 @@ var informal = (function() {
 
                 // run each validator
                 var error_list = validators.map(function (validatorName) {
-                    var result = informal.validators[validatorName](value, $field);
+                    var result = informal.validators[validatorName](value, field);
                     if(result) {
-                        return $field.data('message-' + validatorName) || result;
+                        return field.getAttribute('data-message-' + validatorName) || result;
                     }
                 }).filter(function (result) { return !!result; });
 
@@ -164,10 +207,10 @@ var informal = (function() {
                 if(error_list.length) {
                     errors[name] = error_list;
                 }
-            });
+            }
             // TODO : form-level validation
             return {
-                valid: $.isEmptyObject(errors),
+                valid: Object.keys(errors).length === 0,
                 values: values,
                 errors: errors
             };
