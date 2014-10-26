@@ -87,6 +87,26 @@ var informal = (function() {
             }
         }
 
+        past_date: function (val) {
+            // bail early if blank
+            if(!val) { return; }
+
+            // and is in the future:
+            if( val.isAfter( moment() )) {
+                return 'Date must be in the past';
+            }
+        },
+
+        future_date: function (val) {
+            // bail early if blank
+            if(!val) { return; }
+
+            // and is in the future:
+            if( val.isBefore( moment() )) {
+                return 'Date must be in the future';
+            }
+        }
+
     };
 
     /**
