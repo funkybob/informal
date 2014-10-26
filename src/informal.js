@@ -35,6 +35,12 @@ var informal = (function() {
         checkbox: function (field) {
             return field.hasAttribute('checked') ? field.value : undefined;
         },
+        radiobutton: function (field) {
+        },
+        textarea: function (field) {
+        },
+        select : function (field) {
+        },
     };
     function setValue(field, value) {
         var type = field.getAttribute('type') || field.nodeName;
@@ -124,6 +130,20 @@ var informal = (function() {
     };
 
     informal.Form.prototype = {
+
+        /**
+         * Selector for element to contain error messages
+         */
+        error_container: '.form-group',
+        /**
+         * Class to add to containers when they have errors
+         */
+        error_class: 'has-error',
+        /**
+         * Selector for removing error messages.
+         */
+        error_block_selector: '.has-error .help-block',
+
         /**
          * Clear all errors and values from a field's forms.
          */
@@ -150,11 +170,6 @@ var informal = (function() {
                 field.value = (val === undefined) ? '' : val;
             }
         },
-
-        // selector 
-        error_container: '.form-group',
-        error_class: 'has-error',
-        error_block_selector: '.has-error .help-block',
         /**
          * Clear error elements from the form.
          */
@@ -173,8 +188,9 @@ var informal = (function() {
             this.clear_errors();
             Object.getOwnPropertyNames(errors).forEach(function (key) {
                 var $input = $(this.el.querySelector('[name=' + key + ']'));
-                $input.closest('.form-group').addClass('has-error');
+                $input.closest(this.error_container).addClass(this.error_class);
                 errors[key].forEach(function (val) {
+                    // XXX Make this configurable
                     $input.after('<div class="help-block">' + val + '</div>');
                 });
             }, this);
