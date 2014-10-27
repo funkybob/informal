@@ -152,6 +152,12 @@ var informal = (function() {
             this.clear_errors();
         },
         /**
+         * Focus on the first field element.
+         */
+        focus: function () {
+            this.$el.find('[name]').first().focus();
+        },
+        /**
          * Set field values from an object.
          * @param {object} obj - The object to copy properties from
          */
