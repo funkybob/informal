@@ -31,16 +31,21 @@ var informal = (function() {
         return (helper === undefined) ? field.value : helper(field);
     }
     getValue.helpers = {
-        input: function (field) { return field.value; },
         checkbox: function (field) {
-            return field.hasAttribute('checked') ? field.value : undefined;
+            return field.checked ? field.value : undefined;
         },
-        radiobutton: function (field) {
+        radio: function (field) {
+            return field.checked ? field.value : undefined;
         },
-        textarea: function (field) {
-        },
-        select : function (field) {
-        },
+        select: function (field) {
+            if(!field.multiple) return field.value;
+            var vals = [],
+                opts = field.querySelectorAll('option');
+            for(var i=0; opt = opts[i++];) {
+                if(opt.selected) { vals.push(opt.value); }
+            }
+            return vals;
+        }
     };
     function setValue(field, value) {
         var type = field.getAttribute('type') || field.nodeName;
@@ -48,8 +53,22 @@ var informal = (function() {
         return (helper === undefined) ? field.value = value : helper(field, value);
     }
     setValue.helpers = {
-        input: function (field, value) { return field.value = value; },
-        checkbox: function (field, value) { return field.checked = value == field.value; }
+        checkbox: function (field, value) { field.checked = value == field.value; },
+        radio: function (field, value) { field.checked = value == field.value; },
+        select: function (field, value) {
+            var i, opt, opts;
+            if(!field.multiple) { field.value = value; return; }
+            opts = field.querySelectorAll('option');
+            if(value.constructor.name === 'Array') {
+                for(i=0; opt = opts[i++];) {
+                    opt.selected = value.indexOf(opt.value) != -1;
+                }
+            } else {
+                for(i=0; opt = opts[i++];) {
+                    opt.selected = opt.value == value;
+                }
+            }
+        }
     };
 
     /**
@@ -155,7 +174,7 @@ var informal = (function() {
          * Focus on the first field element.
          */
         focus: function () {
-            this.$el.find('[name]').first().focus();
+            this.el.querySelector('[name]').focus();
         },
         /**
          * Set field values from an object.
