@@ -27,7 +27,7 @@ var informal = (function() {
      */
     function getValue(field) {
         var type = field.getAttribute('type') || field.nodeName;
-        helper = getValue.helper[type];
+        var helper = getValue.helpers[type];
         return (helper === undefined) ? field.value : helper(field);
     }
     getValue.helpers = {
@@ -37,7 +37,7 @@ var informal = (function() {
         radio: function (field) {
             return field.checked ? field.value : undefined;
         },
-        select: function (field) {
+        SELECT: function (field) {
             if(!field.multiple) return field.value;
             var vals = [],
                 opts = field.querySelectorAll('option');
@@ -49,13 +49,13 @@ var informal = (function() {
     };
     function setValue(field, value) {
         var type = field.getAttribute('type') || field.nodeName;
-        helper = setValue.helper[type];
+        var helper = setValue.helpers[type];
         return (helper === undefined) ? field.value = value : helper(field, value);
     }
     setValue.helpers = {
         checkbox: function (field, value) { field.checked = value == field.value; },
         radio: function (field, value) { field.checked = value == field.value; },
-        select: function (field, value) {
+        SELECT: function (field, value) {
             var i, opt, opts;
             if(!field.multiple) { field.value = value; return; }
             opts = field.querySelectorAll('option');
@@ -192,7 +192,7 @@ var informal = (function() {
                     val = moment(val).format(fmt);
                 }
                 // special case for special cases
-                field.value = (val === undefined) ? '' : val;
+                setValue(field, (val === undefined) ? '' : val);
             }
         },
         /**
@@ -235,7 +235,7 @@ var informal = (function() {
             for(i=0; field=fields[i++]; ) {
                 name = field.name;
                 // special case for special cases
-                value = field.value;
+                value = getValue(field);
                 validators = field.getAttribute('data-validators') || '';
                 filters = field.getAttribute('data-filters') || '';
 
