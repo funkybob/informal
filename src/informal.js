@@ -110,7 +110,7 @@ var informal = (function() {
             if(!/^.+@.+\..+$/.test(val)) {
                 return 'Must be a valid email address.';
             }
-        }
+        },
 
         past_date: function (val) {
             // bail early if blank
