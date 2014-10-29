@@ -184,7 +184,7 @@ var informal = (function () {
             errors[key].forEach(function (val) {
                 // XXX Make this configurable
                 var msg = document.createElement('div');
-                msg.classList.push('help-block');
+                msg.classList.add('help-block');
                 msg.innerText = val;
                 container.appendChild(msg);
             });
