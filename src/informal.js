@@ -70,34 +70,7 @@ var informal = (function () {
 
     };
 
-    return {
-        // Field utilities
-        getValue: getValue,
-        setValue: setValue,
-        // Configurables
-        selectors: selectors,
-        filters: filters,
-        validators: validators,
-        // Form functions
-        load_record: load_record,
-        set_errors: set_errors,
-        clear_errors: clear_errors,
-        validate_fields: validate_fields,
-        Form: Form
-    };
-
-    /*
-     * Deal with the lack of uniformity of input fields.
-     * - checkbox only has a value if it's checked
-     * - textarea?
-     * - select/option and multiple?
-     */
-    function getValue(field) {
-        var type = field.getAttribute('type') || field.nodeName;
-        var helper = getValue.helpers[type];
-        return (helper === undefined) ? field.value : helper(field);
-    }
-    getValue.helpers = {
+    var getvalue_helpers = {
         checkbox: function (field) {
             return field.checked ? field.value : undefined;
         },
@@ -115,12 +88,19 @@ var informal = (function () {
             return vals;
         }
     };
-    function setValue(field, value) {
+    /*
+     * Deal with the lack of uniformity of input fields.
+     * - checkbox only has a value if it's checked
+     * - textarea?
+     * - select/option and multiple?
+     */
+    function getValue(field) {
         var type = field.getAttribute('type') || field.nodeName;
-        var helper = setValue.helpers[type];
-        return (helper === undefined) ? field.value = value : helper(field, value);
+        var helper = getvalue_helpers[type];
+        return (helper === undefined) ? field.value : helper(field);
     }
-    setValue.helpers = {
+
+    var setvalue_helpers = {
         checkbox: function (field, value) { field.checked = value == field.value; },
         radio: function (field, value) { field.checked = value == field.value; },
         SELECT: function (field, value) {
@@ -138,6 +118,11 @@ var informal = (function () {
             }
         }
     };
+    function setValue(field, value) {
+        var type = field.getAttribute('type') || field.nodeName;
+        var helper = setvalue_helpers[type];
+        return (helper === undefined) ? field.value = value : helper(field, value);
+    }
 
     /**
      * Set field values from an object.
@@ -153,7 +138,7 @@ var informal = (function () {
             if(typeof val == 'function') {
                 val = obj[field.name]();
             }
-            if(fmt !== undefined) {
+            if(fmt !== null) {
                 val = moment(val).format(fmt);
             }
             // special case for special cases
@@ -325,6 +310,22 @@ var informal = (function () {
             this.clear();
             return validate_fields(this.el);
         }
+    };
+
+    return {
+        // Field utilities
+        getValue: getValue,
+        setValue: setValue,
+        // Configurables
+        selectors: selectors,
+        filters: filters,
+        validators: validators,
+        // Form functions
+        load_record: load_record,
+        set_errors: set_errors,
+        clear_errors: clear_errors,
+        validate_fields: validate_fields,
+        Form: Form
     };
 
 }());
