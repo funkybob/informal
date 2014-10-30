@@ -8,7 +8,7 @@ var informal = (function () {
     };
 
     /**
-     * Filters mutate values.
+     * Filters mutate values before validation.
      */
     var filters = {
 
@@ -36,36 +36,24 @@ var informal = (function () {
          * Indicates the field must have a value.
          */
         required: function (val) {
-            if (!val) { return 'This value is required.'; }
+            return (!val) ? 'This value is required.' : undefined;
         },
 
         /**
          * Loose validation the value looks like an email
          */
         simple_email: function (val) {
-            if(!/^.+@.+\..+$/.test(val)) {
-                return 'Must be a valid email address.';
-            }
+            return /^.+@.+\..+$/.test(val) ? undefined : 'Must be a valid email address.';
         },
 
         past_date: function (val) {
-            // bail early if blank
-            if(!val) { return; }
-
-            // and is in the future:
-            if( val.isAfter( moment() )) {
-                return 'Date must be in the past';
-            }
+            // if it has a value, it must be before now
+            return (!val || val.isAfter(moment())) ? undefined : 'Date must be in the past.';
         },
 
         future_date: function (val) {
-            // bail early if blank
-            if(!val) { return; }
-
-            // and is in the future:
-            if( val.isBefore( moment() )) {
-                return 'Date must be in the future';
-            }
+            // if it has a value, it must be after now
+            return (!val || val.isBefore(moment())) ? undefined : 'Date must be in the future';
         }
 
     };
