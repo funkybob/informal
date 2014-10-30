@@ -88,7 +88,7 @@ tests.push(test_getValue);
 function test_load_record() {
     root.innerHTML = [
         '<input id="i1" type="text" name="i1">',
-        '<input id="c1" type="checkbox" name="c1">',
+        '<input id="on" type="checkbox" name="c1">',
         '<input id="c2" type="checkbox" name="c2" value="c2">',
         '<input type="radio" name="r1" value="r1a">',
         '<input id="r1b" type="radio" name="r1" value="r1b">'
@@ -104,10 +104,9 @@ function test_load_record() {
         if(data.hasOwnProperty(k)) {
             var val = data[k];
             var el = root.querySelector('[name=' + k +']');
-            //var exp = informal.getValue(el);
             var exp = el.id;
-            if(val != exp) {
-                console.log(el, exp, val);
+            if(exp && val != exp) {
+                console.log(el, k, exp, val);
                 return false;
             }
         }
