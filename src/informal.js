@@ -45,7 +45,7 @@ var informal = (function () {
          * Indicates the field must have a value.
          */
         required: function (val) {
-            return (!val) ? 'This value is required.' : undefined;
+            return (!val && val !== 0) ? 'This value is required.' : undefined;
         },
 
         /**
@@ -289,7 +289,7 @@ var informal = (function () {
          * Clear all errors and values from a field's forms.
          */
         clear: function () {
-            ((this.el.nodeName == 'FORM') ? this.el : this.el.querySelector('form')).form.reset();
+            ((this.el.nodeName == 'FORM') ? this.el : this.el.querySelector('form')).reset();
             this.clear_errors();
         },
         /**
