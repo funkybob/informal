@@ -1,7 +1,16 @@
 var informal = (function () {
 
+    /*
+     * Utility to resolve a selector into an element
+     * If no argument is passed, resolves to document.
+     */
+    function resolveElement(el) {
+        el = el || document;
+        return (typeof el === 'string') ? document.querySelector(el) : el;
+    }
+
     var selectors = {
-        error_container: '.form-group',
+        error_container: 'div',
         // XXX Misnomer - this is a class, not a selector
         error_class: 'has-error',
         error_block: '.has-error .help-block'
@@ -67,10 +76,10 @@ var informal = (function () {
         },
         SELECT: function (field) {
             if(!field.multiple) return field.value;
-            var opt,
+            var i, opt,
                 vals = [],
                 opts = field.querySelectorAll('option');
-            for(var i=0; opt = opts[i++];) {
+            for(i=0; opt = opts[i++];) {
                 if(opt.selected) { vals.push(opt.value); }
             }
             return vals;
@@ -82,7 +91,7 @@ var informal = (function () {
      * - textarea?
      * - select/option and multiple?
      */
-    function getValue(field) {
+    function _getv(field) {
         var type = field.getAttribute('type') || field.nodeName;
         var helper = getvalue_helpers[type];
         return (helper === undefined) ? field.value : helper(field);
@@ -95,7 +104,7 @@ var informal = (function () {
             var i, opt, opts;
             if(!field.multiple) { field.value = value; return; }
             opts = field.querySelectorAll('option');
-            if(value.constructor.name === 'Array') {
+            if(Array.isArray(value)) {
                 for(i=0; opt = opts[i++];) {
                     opt.selected = value.indexOf(opt.value) != -1;
                 }
@@ -106,7 +115,7 @@ var informal = (function () {
             }
         }
     };
-    function setValue(field, value) {
+    function _setv(field, value) {
         var type = field.getAttribute('type') || field.nodeName;
         var helper = setvalue_helpers[type];
         return (helper === undefined) ? field.value = value : helper(field, value);
@@ -117,7 +126,7 @@ var informal = (function () {
      * @param {object} obj - The object to copy properties from
      */
     function load_record (obj, root) {
-        root = root || document;
+        root = resolveElement(root);
         var i, val, fmt, field,
             fields = root.querySelectorAll('[name]');
         for(i=0; field = fields[i++] ; ) {
@@ -130,7 +139,7 @@ var informal = (function () {
                 val = moment(val).format(fmt);
             }
             // special case for special cases
-            setValue(field, (val === undefined) ? '' : val);
+            _setv(field, (val === undefined) ? '' : val);
         }
     }
 
@@ -140,27 +149,26 @@ var informal = (function () {
      * @param {object} errors - An object of {fieldname : [list, of, errors]}
      */
     function set_errors (errors, root, selectors) {
-        root = root || document;
+        root = resolveElement(root);
         selectors = selectors || {};
 
         this.clear_errors(root);
         var containers = root.querySelectorAll(selectors.error_container || informal.selectors.error_container);
         Object.getOwnPropertyNames(errors).forEach(function (key) {
-            var input = root.querySelector('[name=' + key +']');
-            // reimplement $.closest
-            var container = input;
+            var input = root.querySelector('[name=' + key +']'),
+                container = input;
             while(container && containers.indexOf(container) == -1) {
                 container = input.parent();
             }
             if(!container) { return; }
-            container.classList.push(selectors.error_class || informal.selectors.error_class);
-            errors[key].forEach(function (val) {
+            container.classList.add(selectors.error_class || informal.selectors.error_class);
+            for(var i=0; val = errors[i++]; ) {
                 // XXX Make this configurable
                 var msg = document.createElement('div');
                 msg.classList.add('help-block');
                 msg.innerText = val;
                 container.appendChild(msg);
-            });
+            };
         }, this);
     }
 
@@ -168,7 +176,7 @@ var informal = (function () {
      * Clear error elements from the form.
      */
     function clear_errors (root, selectors) {
-        root = root || document;
+        root = resolveElement(root);
         selectors = informal.selectors || {};
         var i, el,
             errors = root.querySelectorAll(selectors.error_block || informal.selectors.error_block);
@@ -182,7 +190,7 @@ var informal = (function () {
     }
 
     function validate_fields (root) {
-        root = root || document;
+        root = resolveElement(root);
         var i, field, name, value, validator_names, filter_names,
             values = {},
             errors = {},
@@ -194,7 +202,7 @@ var informal = (function () {
 
         for(i=0; field=fields[i++];) {
             name = field.name;
-            value = getValue(field);
+            value = _getv(field);
             validator_names = field.getAttribute('data-validators') || '';
             filter_names = field.getAttribute('data-filters') || '';
 
@@ -237,7 +245,7 @@ var informal = (function () {
     }
 
     function Form(root) {
-        this.el = (typeof root === 'string') ? document.querySelector(root) : root;
+        this.el = resolveElement(root);
     }
     
     Form.prototype = {
@@ -264,16 +272,16 @@ var informal = (function () {
         /*
          * Provide wrappers to the informal API passing our root node.
          */
-        load_record: function (obj) {
+        loadRecord: function (obj) {
             informal.load_record(obj, this.el);
         },
-        set_errors: function (errors) {
+        setErrors: function (errors) {
             informal.set_errors(errors, this.el, this.selectors);
         },
-        clear_errors: function () {
+        clearErrors: function () {
             informal.clear_errors(this.el);
         },
-        validate_fields: function () {
+        validateFields: function () {
             informal.validate_fields(this.el);
         },
 
@@ -281,7 +289,7 @@ var informal = (function () {
          * Clear all errors and values from a field's forms.
          */
         clear: function () {
-            ((this.el.nodeName == 'FORM') ? this.el : this.el.querySelector('form')).reset();
+            ((this.el.nodeName == 'FORM') ? this.el : this.el.querySelector('form')).form.reset();
             this.clear_errors();
         },
         /**
@@ -302,17 +310,17 @@ var informal = (function () {
 
     return {
         // Field utilities
-        getValue: getValue,
-        setValue: setValue,
+        getVal: _getv,
+        setVal: _setv,
         // Configurables
         selectors: selectors,
         filters: filters,
         validators: validators,
         // Form functions
-        load_record: load_record,
-        set_errors: set_errors,
-        clear_errors: clear_errors,
-        validate_fields: validate_fields,
+        loadRecord: load_record,
+        setErrors: set_errors,
+        clearErrors: clear_errors,
+        validateFields: validate_fields,
         Form: Form
     };
 
