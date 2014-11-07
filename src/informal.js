@@ -217,7 +217,7 @@ var informal = (function () {
 
             // pass the value through the filters
             filter_names.forEach(function(filter_name) {
-                value = informal.filters[filter_name](value);
+                value = informal.filters[filter_name](value, root);
             });
 
             // save current input's values in the validation object
@@ -225,7 +225,7 @@ var informal = (function () {
 
             // run each validator
             var error_list = validator_names.map(function (validator_name) {
-                var result = validators[validator_name](value, field);
+                var result = validators[validator_name](value, field, root);
                 if(result) {
                     return field.getAttribute('data-message-' + validator_name) || result;
                 }
