@@ -20,6 +20,12 @@ var informal = (function () {
      * Filters mutate values before validation.
      */
     var filters = {
+        /**
+         * Trim whitespace
+         */
+        trim: function (val) {
+            return val.replace(/^\s+/, '').replace(/\s+$/, '');
+        },
 
         /**
          * Filter to convert value to an integer
